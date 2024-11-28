@@ -1,9 +1,10 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 import requests
 import json
 import random
+import asyncio
 from bs4 import BeautifulSoup
 
 intents = discord.Intents.default()
@@ -16,6 +17,10 @@ with open('token.txt', 'r') as file:
     lines = file.readlines()
     discord_token = lines[0].strip()
     google_api_key = lines[1].strip()
+
+# Load activities from activities.json with UTF-8 encoding
+with open('activities.json', 'r', encoding='utf-8') as file:
+    activities = json.load(file)
 
 weather_code_mapping = {
     0: "☀️ Clear sky",
@@ -56,6 +61,26 @@ async def on_ready():
         print(f"Synced {len(synced)} commands")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
+    change_activity.start()
+
+@tasks.loop(minutes=5)
+async def change_activity():
+    activity = random.choice(activities)
+    activity_name = activity["name"]
+    activity_type = activity["type"]
+
+    if activity_type == "playing":
+        await bot.change_presence(activity=discord.Game(name=activity_name))
+    elif activity_type == "watching":
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=activity_name))
+    elif activity_type == "listening":
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=activity_name))
+    elif activity_type == "streaming":
+        await bot.change_presence(activity=discord.Streaming(name=activity_name, url="https://twitch.tv/your_channel"))
+    elif activity_type == "competing":
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.competing, name=activity_name))
+    elif activity_type == "custom":
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.custom, name=activity_name))
 
 @bot.event
 async def on_member_join(member):
@@ -108,21 +133,36 @@ async def on_raw_reaction_add(payload):
 
 @bot.tree.command(name='weather', guild=discord.Object(id=257485892095180800))
 async def weather(interaction: discord.Interaction):
+    await interaction.response.defer()  # Defer the response to avoid timeout
+
+    hot_emoji = "<a:thisisfine:1311730759152701460>"
+    cold_emoji = "<a:cold:1311731208220049418>"
+    moderate_emoji = "<a:taok:1311731205733089411>"
+
     locations = {
         "Guarapuava - PR": {"latitude": -25.3902, "longitude": -51.4622},
         "Pelotas - RS": {"latitude": -31.7719, "longitude": -52.3420},
         "São Francisco do Sul - SC": {"latitude": -26.2433, "longitude": -48.6333}
     }
-    weather_data = ["Overseer:\n"]
+    weather_data = ["Weather Report:\n"]
     for location, coords in locations.items():
         url = f"https://api.open-meteo.com/v1/forecast?latitude={coords['latitude']}&longitude={coords['longitude']}&current_weather=true"
         response = requests.get(url)
         data = response.json()
         weather = data['current_weather']
         weather_description = weather_code_mapping.get(weather['weathercode'], "Unknown")
-        weather_data.append(f"**{location}:**\n{weather_description}, {weather['temperature']}°C\n")
+        temperature = weather['temperature']
+        
+        if temperature >= 23:
+            emoji = hot_emoji
+        elif temperature <= 15:
+            emoji = cold_emoji
+        else:
+            emoji = moderate_emoji
 
-    await interaction.response.send_message("\n".join(weather_data))
+        weather_data.append(f"**{location}:**\n{weather_description}, {temperature}°C {emoji}\n")
+
+    await interaction.followup.send("\n".join(weather_data))  # Send the follow-up message
 
 @bot.tree.command(name='search', description='Search Google and return the first result', guild=discord.Object(id=257485892095180800))
 async def search_google(interaction: discord.Interaction, query: str):
