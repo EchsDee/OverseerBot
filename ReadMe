@@ -1,0 +1,50 @@
+# NewBot
+
+NewBot is a Discord bot designed to enhance your server experience with a variety of commands.
+
+## Features
+none
+
+## Commands
+Weather, tells you the weather
+remind me, reminds you
+search(wip), sends you an answer
+play, for songs
+
+### Moderation
+gives role to reaction
+
+### Fun
+answers to any dis, deez or this
+
+### Utility
+
+
+## Installation
+
+1. Clone the repository:
+    ```bash
+    git clone https://github.com/yourusername/NewBot.git
+    ```
+2. Install the dependencies:
+    ```bash
+    cd NewBot
+    npm install
+    ```
+3. Configure the bot with your Discord token:
+    ```bash
+    cp .env.example .env
+    # Edit .env with your token
+    ```
+4. Start the bot:
+    ```bash
+    npm start
+    ```
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+## License
+
+This project is licensed under the MIT License.
