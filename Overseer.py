@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import requests
+import json
+import random
 from bs4 import BeautifulSoup
 
 intents = discord.Intents.default()
@@ -13,8 +15,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 with open('token.txt', 'r') as file:
     lines = file.readlines()
     discord_token = lines[0].strip()
-    giphy_token = lines[1].strip()
-
+    google_api_key = lines[1].strip()
 
 weather_code_mapping = {
     0: "☀️ Clear sky",
@@ -136,16 +137,25 @@ async def search_google(interaction: discord.Interaction, query: str):
     else:
         await interaction.response.send_message("No results found.")
 
-@bot.tree.command(name='gif', description='Search for a GIF and return the first result', guild=discord.Object(id=257485892095180800))
+@bot.tree.command(name='gif', description='Search for a GIF and return a random result from the top 50', guild=discord.Object(id=257485892095180800))
 async def gif(interaction: discord.Interaction, query: str):
-    url = f"https://api.giphy.com/v1/gifs/search?api_key={giphy_token}&q={query}&limit=1"
-    response = requests.get(url)
-    data = response.json()
-    if data['data']:
-        gif_url = data['data'][0]['images']['original']['url']
-        await interaction.response.send_message(gif_url)
+    lmt = 50
+    search_url = f"https://tenor.googleapis.com/v2/search?q={query}&key={google_api_key}&client_key=my_test_app&limit={lmt}"
+    response = requests.get(search_url)
+    if response.status_code == 200:
+        data = response.json()
+        if 'results' in data and data['results']:
+            random_gif = random.choice(data['results'])
+            gif_url = random_gif['media_formats']['gif']['url']
+            await interaction.response.send_message(gif_url)
+        else:
+            await interaction.response.send_message("No GIFs found.")
+            print(f"Google Tenor API response: {data}")
     else:
-        await interaction.response.send_message("No GIFs found.")
+        await interaction.response.send_message("Failed to fetch GIFs.")
+        print(f"Google Tenor API response: {response.status_code}, {response.text}")
 
-# Run the bot with the Discord token
+with open('token.txt', 'r') as file:
+    token = file.read().strip()
+
 bot.run(discord_token)
