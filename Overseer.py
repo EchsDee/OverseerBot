@@ -286,39 +286,6 @@ async def skip(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("The bot is not connected to a voice channel.")
 
-@bot.tree.command(
-    name='weather',
-    description='Get the current weather for a specified location',
-    guilds=[
-        discord.Object(id=257485892095180800),
-        discord.Object(id=718620999372767305)
-    ]
-
-)
-async def weather(interaction: discord.Interaction, location: str):
-    try:
-        base_url = "http://api.openweathermap.org/data/2.5/weather?"
-        complete_url = f"{base_url}appid={google_api_key}&q={location}"
-        
-        response = requests.get(complete_url)
-        data = response.json()
-        
-        if data["cod"] != "404":
-            main = data["main"]
-            weather_desc = data["weather"][0]["description"]
-            temp = main["temp"]
-            humidity = main["humidity"]
-            message = (f"**Weather in {location.title()}**\n"
-                       f"Description: {weather_desc}\n"
-                       f"Temperature: {temp}K\n"
-                       f"Humidity: {humidity}%")
-            await interaction.response.send_message(message)
-        else:
-            await interaction.response.send_message("Location not found.")
-    except Exception as e:
-        await interaction.response.send_message("An error occurred while fetching the weather.")
-        print(f"Weather command error in guild {interaction.guild.id}: {e}")
-
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
